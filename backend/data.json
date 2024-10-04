@@ -1,0 +1,159 @@
+{
+  "tenants": [
+    {
+      "name": "Tenant 1",
+      "description": "First tenant"
+    },
+    {
+      "name": "Tenant 2",
+      "description": "Second tenant"
+    }
+  ],
+  "workspaces": [
+    {
+      "name": "Workspace 1",
+      "description": "First workspace",
+      "tenant_id": 1
+    },
+    {
+      "name": "Workspace 2",
+      "description": "Second workspace",
+      "tenant_id": 1
+    },
+    {
+      "name": "Workspace 3",
+      "description": "Third workspace",
+      "tenant_id": 2
+    }
+  ],
+  "tasks": [
+    {
+      "workspace_id": "1",
+      "title": "Deploy Application",
+      "task_type": "deployment",
+      "technology": "Kubernetes",
+      "description": "Deploy the application to Kubernetes cluster",
+      "extended_info": "Use the latest Docker image for deployment",
+      "tags": ["deployment", "kubernetes"],
+      "forms": [
+        {
+          "id": "form1",
+          "name": "Deployment Form",
+          "fields": {
+            "namespace": "production",
+            "replicas": "3"
+          }
+        }
+      ],
+      "approvals": [
+        {
+          "id": "approval1",
+          "user_id": "user1",
+          "approved": true,
+          "approval_date": "2023-05-01T10:00:00Z"
+        }
+      ],
+      "metadata": {
+        "priority": "high",
+        "estimated_duration": "30m"
+      },
+      "tasks_executed": [
+        {
+          "id": "exec1",
+          "run_at": "2023-05-01T11:00:00Z",
+          "workspace_id": "1",
+          "done": true,
+          "status": "Completed"
+        }
+      ]
+    },
+    {
+      "workspace_id": "2",
+      "title": "Run Tests",
+      "task_type": "testing",
+      "technology": "Jest",
+      "description": "Run automated tests for the application",
+      "tags": ["testing", "automation"],
+      "forms": [],
+      "approvals": [],
+      "metadata": {
+        "priority": "medium",
+        "estimated_duration": "15m"
+      },
+      "tasks_executed": []
+    },
+    {
+      "workspace_id": "3",
+      "title": "Build Docker Image",
+      "task_type": "build",
+      "technology": "Docker",
+      "description": "Build a Docker image for the application",
+      "extended_info": "Use multi-stage build for optimized image size",
+      "tags": ["build", "docker", "ci"],
+      "forms": [
+        {
+          "id": "form2",
+          "name": "Docker Build Form",
+          "fields": {
+            "image_name": "myapp",
+            "image_tag": "latest"
+          }
+        }
+      ],
+      "approvals": [],
+      "metadata": {
+        "priority": "high",
+        "estimated_duration": "10m"
+      },
+      "tasks_executed": []
+    },
+    {
+      "workspace_id": "1",
+      "title": "Configure Monitoring",
+      "task_type": "monitoring",
+      "technology": "Prometheus",
+      "description": "Set up Prometheus monitoring for the application",
+      "extended_info": "Configure alerting rules and Grafana dashboards",
+      "tags": ["monitoring", "prometheus", "grafana"],
+      "forms": [],
+      "approvals": [],
+      "metadata": {
+        "priority": "medium",
+        "estimated_duration": "45m"
+      },
+      "tasks_executed": []
+    },
+    {
+      "workspace_id": "2",
+      "title": "Database Migration",
+      "task_type": "database",
+      "technology": "Flyway",
+      "description": "Run database migration scripts",
+      "extended_info": "Apply schema changes and data updates",
+      "tags": ["database", "migration", "flyway"],
+      "forms": [
+        {
+          "id": "form3",
+          "name": "Migration Form",
+          "fields": {
+            "target_version": "v2.5",
+            "rollback_on_failure": "true"
+          }
+        }
+      ],
+      "approvals": [
+        {
+          "id": "approval2",
+          "user_id": "user2",
+          "approved": false,
+          "approval_date": null
+        }
+      ],
+      "metadata": {
+        "priority": "high",
+        "estimated_duration": "20m"
+      },
+      "tasks_executed": []
+    }
+  ]
+}
