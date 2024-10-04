@@ -10,6 +10,8 @@ python = "^3.10"
 fastapi = "^0.115.0"
 uvicorn = "^0.31.0"
 fastapi-cors = "^0.0.6"
+loguru = "^0.7.2"
+colorama = "^0.4.6"
 
 
 [tool.poetry.group.dev.dependencies]

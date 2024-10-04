@@ -1,4 +1,4 @@
-import create from "zustand";
+import { create } from "zustand";
 import { Task, TaskExecution } from "../types";
 import { config } from "../config";
 
