@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from src.domain.task import Task, TaskCreate, TaskUpdate, TaskExecuted
 from src.domain.workspace_tenant import Tenant, TenantCreate, TenantUpdate, Workspace, WorkspaceCreate, WorkspaceUpdate
@@ -8,12 +8,14 @@ from src.application.task_service import TaskService
 from src.application.workspace_tenant_service import TenantService, WorkspaceService
 from typing import List, Dict, Any
 import os
+import random
 import json
 from pydantic import BaseModel
 import asyncio
 from dotenv import load_dotenv
 import logging
 from colorama import Fore, Style, init
+
 
 def initialize_colorama():
     init(autoreset=True)
@@ -49,7 +51,7 @@ def create_app():
     app = FastAPI()
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=['http://localhost:5173'],
+        allow_origins=['*'],
         allow_credentials=True,
         allow_methods=['*'],
         allow_headers=['*'],
@@ -123,6 +125,8 @@ def setup_routes(app, task_service):
     class TaskExecutionRequest(BaseModel):
         form_data: Dict[str, Any]
 
+    active_connections: Dict[str, WebSocket] = {}
+
     @app.post("/tasks/{task_id}/execute")
     async def execute_task(task_id: str, execution_request: TaskExecutionRequest):
         task = task_service.get_task_by_id(task_id)
@@ -131,10 +135,43 @@ def setup_routes(app, task_service):
 
         async def simulate_execution():
             await asyncio.sleep(2)
-            return {"status": "completed", "message": f"Task {task_id} executed successfully"}
+            return {"status": "started", "task_id": task_id, "websocket_url": f"/ws/task/{task_id}"}
 
         execution_result = await simulate_execution()
         return execution_result
+
+    @app.websocket("/ws/task/{task_id}")
+    async def websocket_endpoint(websocket: WebSocket, task_id: str):
+        await websocket.accept()
+        active_connections[task_id] = websocket
+        try:
+            await simulate_task_execution(task_id, websocket)
+        except WebSocketDisconnect:
+            del active_connections[task_id]
+        finally:
+            if task_id in active_connections:
+                del active_connections[task_id]
+
+    async def simulate_task_execution(task_id: str, websocket: WebSocket):
+        steps = ["Initializing", "Processing", "Finalizing", "Evaluation", "Calculating", "Validating", "Finishing"]
+        try:
+            for step in steps:
+                await websocket.send_json({"type": "log", "message": f"[INFO] {step} task {task_id}"})
+                await asyncio.sleep(0.3)
+                for _ in range(30):
+                    log_type = random.choice(["INFO", "WARNING", "ERROR", "DEBUG"])
+                    message = f"[{log_type}] {random.choice(['Process A', 'Process B', 'Process C', 'Process D', 'Process E'])} - {random.randint(1000, 9999)}"
+                    await websocket.send_json({"type": "log", "message": message})
+                    await asyncio.sleep(0.2)
+
+            # Simular finalización exitosa o error aleatorio
+            if random.random() < 0.9:  # 90% de probabilidad de éxito
+                await websocket.send_json({"type": "status", "status": "completed"})
+            else:
+                await websocket.send_json({"type": "error", "message": "Task failed due to an unexpected error"})
+        finally:
+            # Cerrar la conexión WebSocket
+            await websocket.close()
 
 def main():
     initialize_colorama()

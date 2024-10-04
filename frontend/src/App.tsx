@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -7,25 +7,12 @@ import Tasks from "./pages/Tasks";
 import Pipelines from "./pages/Pipelines";
 import Settings from "./pages/Settings";
 import TaskExecution from "./pages/TaskExecution";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { useTaskStore } from "./store/taskStore";
 
 function App() {
-  const [taskStats, setTaskStats] = useState({
-    executed: 0,
-    successful: 0,
-    failed: 0,
-    inProgress: 0,
-  });
-
-  useEffect(() => {
-    // Aquí deberías obtener las estadísticas reales de las tareas
-    // Por ahora, usaremos datos de ejemplo
-    setTaskStats({
-      executed: 100,
-      successful: 75,
-      failed: 15,
-      inProgress: 10,
-    });
-  }, []);
+  const taskStats = useTaskStore((state) => state.taskStats);
 
   return (
     <Router>
@@ -50,6 +37,7 @@ function App() {
           </main>
         </div>
       </div>
+      <ToastContainer />
     </Router>
   );
 }

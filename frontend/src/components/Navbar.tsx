@@ -1,22 +1,15 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   FaSearch,
   FaCheckCircle,
   FaTimesCircle,
   FaSpinner,
 } from "react-icons/fa";
+import { useTaskStore } from "../store/taskStore";
 
-interface NavbarProps {
-  taskStats: {
-    executed: number;
-    successful: number;
-    failed: number;
-    inProgress: number;
-  };
-}
-
-const Navbar: React.FC<NavbarProps> = ({ taskStats }) => {
-  const [searchTerm, setSearchTerm] = useState("");
+const Navbar: React.FC = () => {
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const taskStats = useTaskStore((state) => state.taskStats);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,16 +34,16 @@ const Navbar: React.FC<NavbarProps> = ({ taskStats }) => {
         </form>
         <div className="flex space-x-4 ml-4">
           <div className="flex items-center">
+            <FaSpinner className="text-blue-500 mr-1 animate-spin" />
+            <span>{taskStats.inProgress}</span>
+          </div>
+          <div className="flex items-center">
             <FaCheckCircle className="text-green-500 mr-1" />
-            <span>{taskStats.successful}</span>
+            <span>{taskStats.completed}</span>
           </div>
           <div className="flex items-center">
             <FaTimesCircle className="text-red-500 mr-1" />
             <span>{taskStats.failed}</span>
-          </div>
-          <div className="flex items-center">
-            <FaSpinner className="text-blue-500 mr-1 animate-spin" />
-            <span>{taskStats.inProgress}</span>
           </div>
         </div>
       </div>
