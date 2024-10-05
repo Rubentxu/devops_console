@@ -1,6 +1,7 @@
 from typing import List, Optional
-from src.domain.workspace_tenant import Tenant, TenantCreate, TenantUpdate, Workspace, WorkspaceCreate, WorkspaceUpdate
-from src.domain.workspace_tenant_repository import TenantRepository, WorkspaceRepository
+from src.domain.tenant import Tenant, TenantCreate, TenantUpdate
+from src.domain.tenant_repository import Tenant, TenantCreate, TenantUpdate, TenantRepository
+from src.domain.workspace_repository import WorkspaceRepository, Workspace, WorkspaceCreate, WorkspaceUpdate
 
 class InMemoryTenantRepository(TenantRepository):
     def __init__(self):

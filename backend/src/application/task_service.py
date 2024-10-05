@@ -1,5 +1,5 @@
 from src.domain.task import Task, TaskCreate, TaskUpdate, TaskExecuted
-from src.infrastructure.in_memory_task_repository import InMemoryTaskRepository
+from src.infrastructure.repositories.in_memory_task_repository import InMemoryTaskRepository
 from typing import List, Optional
 
 class TaskService:

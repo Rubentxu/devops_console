@@ -1,5 +1,5 @@
-from src.domain.workspace_tenant import Tenant, TenantCreate, TenantUpdate, Workspace, WorkspaceCreate, WorkspaceUpdate
-from src.domain.workspace_tenant_repository import TenantRepository, WorkspaceRepository
+from src.domain.workspace import Tenant, TenantCreate, TenantUpdate, Workspace, WorkspaceCreate, WorkspaceUpdate
+from src.domain.workspace_repository import TenantRepository, WorkspaceRepository
 from typing import List, Optional
 
 class TenantService:
