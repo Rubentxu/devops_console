@@ -1,6 +1,6 @@
 from typing import List, Optional
-from src.domain.workspace import Workspace, WorkspaceCreate, WorkspaceUpdate
-from src.domain.workspace_repository import WorkspaceRepository
+from src.domain.workspace.workspace import Workspace, WorkspaceCreate, WorkspaceUpdate
+from src.domain.workspace.workspace_repository import WorkspaceRepository
 import uuid
 
 class InMemoryWorkspaceRepository(WorkspaceRepository):

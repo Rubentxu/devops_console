@@ -11,7 +11,7 @@ import Workspaces from "./pages/Workspaces"; // Importa el nuevo componente Work
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useTaskStore } from "./store/taskStore";
-import Tenants from "./pages/Tenants";
+import { Tenants } from "./pages/Tenants";
 
 function App() {
   const taskStats = useTaskStore((state) => state.taskStats);

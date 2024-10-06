@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 from datetime import datetime
 from enum import Enum
+import uuid
 
 class TaskStatus(str, Enum):
     PENDING = 'Pending'
@@ -33,7 +34,7 @@ class Task(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     create_at: datetime = Field(default_factory=datetime.utcnow)
     workspace_id: str
-    title: str
+    name: str
     task_type: str
     technology: str
     description: Optional[str] = None
@@ -46,7 +47,7 @@ class Task(BaseModel):
 
 class TaskCreate(BaseModel):
     workspace_id: str
-    title: str
+    name: str
     task_type: str
     technology: str
     description: Optional[str] = None
@@ -66,3 +67,4 @@ class TaskUpdate(BaseModel):
     forms: Optional[List[Form]] = None
     approvals: Optional[List[Approval]] = None
     metadata: Optional[Dict[str, str]] = None
+    tasks_executed: Optional[List[TaskExecuted]] = None

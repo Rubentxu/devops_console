@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from .workspace import Workspace, WorkspaceCreate, WorkspaceUpdate
+from ..workspace.workspace import Workspace, WorkspaceCreate, WorkspaceUpdate
 from .tenant import Tenant, TenantCreate, TenantUpdate
 
 class TenantRepository(ABC):

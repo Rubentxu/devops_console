@@ -29,7 +29,7 @@
   "tasks": [
     {
       "workspace_id": "1",
-      "title": "Deploy Application",
+      "name": "Deploy Application",
       "task_type": "deployment",
       "technology": "Kubernetes",
       "description": "Deploy the application to Kubernetes cluster",
@@ -41,7 +41,13 @@
           "name": "Deployment Form",
           "fields": {
             "namespace": "production",
-            "replicas": "3"
+            "replicas": "3",
+            "image_tag": "latest",
+            "cpu_limit": "500m",
+            "memory_limit": "512Mi",
+            "healthcheck_path": "/health",
+            "ingress_enabled": "true",
+            "ingress_host": "app.example.com"
           }
         }
       ],
@@ -69,7 +75,74 @@
     },
     {
       "workspace_id": "2",
-      "title": "Run Tests",
+      "name": "Configure CI Pipeline",
+      "task_type": "ci",
+      "technology": "Jenkins",
+      "description": "Set up a Continuous Integration pipeline",
+      "extended_info": "Configure Jenkins job for automated builds and tests",
+      "tags": ["ci", "jenkins", "automation"],
+      "forms": [
+        {
+          "id": "form2",
+          "name": "CI Pipeline Configuration",
+          "fields": {
+            "repository_url": "https://github.com/example/repo.git",
+            "branch": "main",
+            "build_command": "mvn clean install",
+            "test_command": "mvn test",
+            "artifact_path": "target/*.jar",
+            "notification_email": "team@example.com"
+          }
+        }
+      ],
+      "approvals": [],
+      "metadata": {
+        "priority": "medium",
+        "estimated_duration": "45m"
+      },
+      "tasks_executed": []
+    },
+    {
+      "workspace_id": "3",
+      "name": "Provision Cloud Infrastructure",
+      "task_type": "infrastructure",
+      "technology": "Terraform",
+      "description": "Provision cloud resources using Terraform",
+      "extended_info": "Create VPC, subnets, and EC2 instances on AWS",
+      "tags": ["infrastructure", "terraform", "aws"],
+      "forms": [
+        {
+          "id": "form3",
+          "name": "Cloud Infrastructure Provisioning",
+          "fields": {
+            "region": "us-west-2",
+            "vpc_cidr": "10.0.0.0/16",
+            "public_subnet_cidr": "10.0.1.0/24",
+            "private_subnet_cidr": "10.0.2.0/24",
+            "instance_type": "t2.micro",
+            "key_pair_name": "my-key-pair",
+            "min_size": "2",
+            "max_size": "5"
+          }
+        }
+      ],
+      "approvals": [
+        {
+          "id": "approval2",
+          "user_id": "user2",
+          "approved": false,
+          "approval_date": null
+        }
+      ],
+      "metadata": {
+        "priority": "high",
+        "estimated_duration": "60m"
+      },
+      "tasks_executed": []
+    },
+    {
+      "workspace_id": "2",
+      "name": "Run Tests",
       "task_type": "testing",
       "technology": "Jest",
       "description": "Run automated tests for the application",
@@ -84,7 +157,7 @@
     },
     {
       "workspace_id": "3",
-      "title": "Build Docker Image",
+      "name": "Build Docker Image",
       "task_type": "build",
       "technology": "Docker",
       "description": "Build a Docker image for the application",
@@ -109,7 +182,7 @@
     },
     {
       "workspace_id": "1",
-      "title": "Configure Monitoring",
+      "name": "Configure Monitoring",
       "task_type": "monitoring",
       "technology": "Prometheus",
       "description": "Set up Prometheus monitoring for the application",
@@ -125,7 +198,7 @@
     },
     {
       "workspace_id": "2",
-      "title": "Database Migration",
+      "name": "Database Migration",
       "task_type": "database",
       "technology": "Flyway",
       "description": "Run database migration scripts",
@@ -154,6 +227,71 @@
         "estimated_duration": "20m"
       },
       "tasks_executed": []
+    }
+  ],
+  "workers": [
+    {
+      "name": "Kubernetes Worker",
+      "type": "kubernetes",
+      "config": {
+        "namespace": "default",
+        "job_template": {
+          "apiVersion": "batch/v1",
+          "kind": "Job",
+          "metadata": {
+            "generateName": "task-"
+          },
+          "spec": {
+            "template": {
+              "spec": {
+                "containers": [
+                  {
+                    "name": "task",
+                    "image": "busybox",
+                    "command": ["echo", "Hello from Kubernetes!"]
+                  }
+                ],
+                "restartPolicy": "Never"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Docker Worker",
+      "type": "docker",
+      "config": {
+        "image": "busybox",
+        "command": "echo 'Hello from Docker!'",
+        "environment": {
+          "ENV_VAR": "value"
+        },
+        "volumes": {
+          "/host/path": {
+            "bind": "/container/path",
+            "mode": "ro"
+          }
+        }
+      }
+    },
+    {
+      "name": "Podman Worker",
+      "type": "podman",
+      "config": {
+        "image": "busybox",
+        "command": "echo 'Hello from Podman!'",
+        "environment": {
+          "ENV_VAR": "value"
+        },
+        "mounts": {
+          "/host/path": {
+            "target": "/container/path",
+            "type": "bind",
+            "read_only": true
+          }
+        }
+      }
     }
   ]
 }

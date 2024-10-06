@@ -16,7 +16,10 @@ const TaskExecution: React.FC = () => {
   useEffect(() => {
     if (taskId) {
       setIsLoading(true);
-      connectWebSocket(taskId).finally(() => setIsLoading(false));
+      connectWebSocket(taskId).finally(() => {
+        console.log("WebSocket finished");
+        setIsLoading(false);
+      });
     }
 
     return () => {
@@ -25,8 +28,10 @@ const TaskExecution: React.FC = () => {
   }, [taskId, connectWebSocket, disconnectWebSocket]);
 
   useEffect(() => {
+    console.log("TaskExecution status: ", taskExecution?.status);
     if (
       taskExecution?.status === "completed" ||
+      taskExecution?.status === "closed" ||
       taskExecution?.status === "failed"
     ) {
       setIsFinished(true);

@@ -13,6 +13,9 @@ fastapi-cors = "^0.0.6"
 loguru = "^0.7.2"
 colorama = "^0.4.6"
 websockets = "^13.1"
+kubernetes = "^31.0.0"
+docker = "^7.1.0"
+podman = "^5.2.0"
 
 
 [tool.poetry.group.dev.dependencies]

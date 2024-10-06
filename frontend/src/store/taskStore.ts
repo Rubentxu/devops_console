@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Task, TaskExecution, TaskStatus } from "../types/taskTypes";
 import { config } from "../config";
+import TaskExecution from "../pages/TaskExecution";
 
 interface TaskStore {
   tasks: Task[];
@@ -15,7 +16,10 @@ interface TaskStore {
   socket: WebSocket | null;
   fetchTasks: () => Promise<void>;
   setCurrentTask: (task: Task | null) => void;
-  executeTask: (taskId: string, formData: Record<string, any>) => Promise<void>;
+  executeTask: (
+    taskId: string,
+    formData: Record<string, unknown>,
+  ) => Promise<void>;
   updateTaskExecution: (log: string) => void;
   setTaskExecutionUrl: (url: string | null) => void;
   connectWebSocket: (taskId: string) => Promise<void>;
@@ -23,10 +27,18 @@ interface TaskStore {
   updateTaskStats: (status: TaskStatus) => void;
 }
 
+type WebSocketEventType = "launch" | "log" | "status" | "error" | "close";
+
+interface WebSocketEvent {
+  type: WebSocketEventType;
+  message?: string;
+  status?: TaskStatus;
+}
+
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   currentTask: null,
-  taskExecution: null,
+  taskExecution: "initializing",
   taskExecutionUrl: null,
   taskStats: {
     inProgress: 0,
@@ -66,6 +78,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       set({
         taskExecution: {
           id: executionData.task_id,
+          taskId: taskId,
           status: executionData.status,
           logs: [],
         },
@@ -86,40 +99,69 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     );
 
     socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "log") {
-        set((state) => ({
-          taskExecution: state.taskExecution
-            ? {
-                ...state.taskExecution,
-                logs: [...state.taskExecution.logs, data.message],
-              }
-            : null,
-        }));
-      } else if (data.type === "status") {
-        set((state) => ({
-          taskExecution: state.taskExecution
-            ? { ...state.taskExecution, status: data.status }
-            : null,
-        }));
-        get().updateTaskStats(data.status);
-      } else if (data.type === "error") {
-        set((state) => ({
-          taskExecution: state.taskExecution
-            ? { ...state.taskExecution, error: data.message, status: "failed" }
-            : null,
-        }));
-        get().updateTaskStats("failed");
-        get().disconnectWebSocket();
-        socket.send(
-          JSON.stringify({ type: "close", reason: "Error event received" }),
-        );
-      } else {
-        console.error("Unknown event type received:", data.type);
-        get().disconnectWebSocket();
-        socket.send(
-          JSON.stringify({ type: "close", reason: "Unknown event type" }),
-        );
+      const data = JSON.parse(event.data) as WebSocketEvent;
+      switch (data.type) {
+        case "launch":
+          console.log("Task launched:", data.message);
+          set((state) => ({
+            taskExecution: state.taskExecution
+              ? { ...state.taskExecution, status: "running" }
+              : null,
+          }));
+          get().updateTaskStats("running");
+          break;
+        case "log":
+          if (data.message) {
+            set((state) => ({
+              taskExecution: state.taskExecution
+                ? {
+                    ...state.taskExecution,
+                    logs: [...state.taskExecution.logs, data.message],
+                  }
+                : null,
+            }));
+          }
+          break;
+        case "status":
+          if (data.status) {
+            set((state) => ({
+              taskExecution: state.taskExecution
+                ? { ...state.taskExecution, status: data.status }
+                : null,
+            }));
+            get().updateTaskStats(data.status);
+            if (data.status === "Succeeded") {
+              get().disconnectWebSocket();
+            }
+          }
+          break;
+        case "error":
+          console.error("Task error:", data.message);
+          set((state) => ({
+            taskExecution: state.taskExecution
+              ? {
+                  ...state.taskExecution,
+                  error: data.message,
+                  status: "failed",
+                }
+              : null,
+          }));
+          get().updateTaskStats("failed");
+          get().disconnectWebSocket();
+          break;
+        case "close":
+          console.log("Task execution finished:", data.message);
+          set((state) => ({
+            taskExecution: state.taskExecution
+              ? { ...state.taskExecution, status: "closed" }
+              : null,
+          }));
+          get().updateTaskStats("closed");
+          get().disconnectWebSocket();
+
+          break;
+        default:
+          console.warn("Unknown event type:", (data as WebSocketEvent).type);
       }
     };
 
@@ -152,7 +194,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       }));
       get().updateTaskStats("failed");
       get().disconnectWebSocket();
-      socket.send(JSON.stringify({ type: "close", reason: "WebSocket error" }));
     };
 
     set({ socket });
@@ -169,9 +210,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   updateTaskStats: (status: TaskStatus) => {
     set((state) => {
       const newStats = { ...state.taskStats };
-      if (status === "in_progress") {
+      if (status === "running") {
         newStats.inProgress += 1;
-      } else if (status === "completed") {
+      } else if (status === "Succeeded") {
         newStats.inProgress -= 1;
         newStats.completed += 1;
       } else if (status === "failed") {

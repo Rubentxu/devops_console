@@ -1,8 +1,8 @@
 from typing import List, Optional
 import uuid
-from src.domain.tenant import Tenant, TenantCreate, TenantUpdate
-from src.domain.tenant_repository import Tenant, TenantCreate, TenantUpdate, TenantRepository
-from src.domain.workspace_repository import WorkspaceRepository, Workspace, WorkspaceCreate, WorkspaceUpdate
+from src.domain.tenant.tenant import Tenant, TenantCreate, TenantUpdate
+from src.domain.tenant.tenant_repository import Tenant, TenantCreate, TenantUpdate, TenantRepository
+from src.domain.workspace.workspace_repository import WorkspaceRepository, Workspace, WorkspaceCreate, WorkspaceUpdate
 
 class InMemoryTenantRepository(TenantRepository):
     def __init__(self):

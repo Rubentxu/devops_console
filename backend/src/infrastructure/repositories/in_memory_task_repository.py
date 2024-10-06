@@ -1,5 +1,5 @@
 from typing import List, Optional
-from src.domain.task import Task, TaskCreate, TaskUpdate
+from src.domain.task.task import Task, TaskCreate, TaskUpdate
 import uuid
 
 class InMemoryTaskRepository:

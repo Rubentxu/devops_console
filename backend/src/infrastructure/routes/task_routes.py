@@ -1,10 +1,16 @@
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
-from src.domain.task import Task, TaskCreate, TaskUpdate, TaskExecuted
+from src.domain.task.task import Task, TaskCreate, TaskUpdate, TaskExecuted
 from src.application.task_service import TaskService
 from typing import List, Dict, Any
 import asyncio
 import random
 from pydantic import BaseModel
+
+
+class TaskExecutionRequest(BaseModel):
+    form_data: Dict[str, Any]
+
+active_connections: Dict[str, WebSocket] = {}
 
 def create_task_router(task_service: TaskService):
     router = APIRouter()
@@ -47,35 +53,31 @@ def create_task_router(task_service: TaskService):
             raise HTTPException(status_code=404, detail='Task not found')
         return task
 
-    class TaskExecutionRequest(BaseModel):
-        form_data: Dict[str, Any]
-
-    active_connections: Dict[str, WebSocket] = {}
-
     @router.post("/tasks/{task_id}/execute")
-    async def execute_task(task_id: str, execution_request: TaskExecutionRequest):
-        task = task_service.get_task_by_id(task_id)
-        if not task:
+    async def execute_task(task_id: str):
+        result = await task_service.execute_task(task_id)
+        if result == "Tarea no encontrada":
             raise HTTPException(status_code=404, detail="Task not found")
-
-        async def simulate_execution():
-            await asyncio.sleep(2)
-            return {"status": "started", "task_id": task_id, "websocket_url": f"/ws/task/{task_id}"}
-
-        execution_result = await simulate_execution()
-        return execution_result
+        return {"result": result, "websocket_url": f"/ws/task/{task_id}"}
 
     @router.websocket("/ws/task/{task_id}")
     async def websocket_endpoint(websocket: WebSocket, task_id: str):
         await websocket.accept()
-        active_connections[task_id] = websocket
         try:
-            await simulate_task_execution(task_id, websocket)
+            async for message in task_service.execute_and_monitor_task(task_id):
+                if await websocket.send_json(message):
+                    break
         except WebSocketDisconnect:
-            del active_connections[task_id]
+            pass
+        except Exception as e:
+            logger.error(f"Error in WebSocket connection: {str(e)}")
         finally:
-            if task_id in active_connections:
-                del active_connections[task_id]
+            try:
+                await websocket.close()
+            except RuntimeError:
+                # La conexión ya está cerrada, ignoramos este error
+                pass
+
 
     async def simulate_task_execution(task_id: str, websocket: WebSocket):
         steps = ["Initializing", "Processing", "Finalizing", "Evaluation", "Calculating", "Validating", "Finishing"]
