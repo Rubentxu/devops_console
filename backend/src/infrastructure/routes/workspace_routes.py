@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from src.domain.workspace_tenant import Workspace, WorkspaceCreate, WorkspaceUpdate
-from src.application.workspace_tenant_service import WorkspaceService
+from src.domain.workspace import Workspace, WorkspaceCreate, WorkspaceUpdate
+from src.application.workspace_service import WorkspaceService
 from typing import List
 
 def create_workspace_router(workspace_service: WorkspaceService):

@@ -1,9 +1,9 @@
+from src.domain.task_repository import TaskRepository
 from src.domain.task import Task, TaskCreate, TaskUpdate, TaskExecuted
-from src.infrastructure.repositories.in_memory_task_repository import InMemoryTaskRepository
 from typing import List, Optional
 
 class TaskService:
-    def __init__(self, task_repository: InMemoryTaskRepository):
+    def __init__(self, task_repository: TaskRepository):
         self.task_repository = task_repository
 
     def create_task(self, task: TaskCreate) -> Task:

@@ -7,9 +7,11 @@ import Tasks from "./pages/Tasks";
 import Pipelines from "./pages/Pipelines";
 import Settings from "./pages/Settings";
 import TaskExecution from "./pages/TaskExecution";
+import Workspaces from "./pages/Workspaces"; // Importa el nuevo componente Workspaces
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useTaskStore } from "./store/taskStore";
+import Tenants from "./pages/Tenants";
 
 function App() {
   const taskStats = useTaskStore((state) => state.taskStats);
@@ -29,6 +31,9 @@ function App() {
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/pipelines" element={<Pipelines />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/workspaces" element={<Workspaces />} />{" "}
+              <Route path="/tenants" element={<Tenants />} />
+              {/* Nueva ruta para Workspaces */}
               <Route
                 path="/task-execution/:taskId"
                 element={<TaskExecution />}

@@ -12,13 +12,13 @@ class WorkspaceRepository(ABC):
         pass
 
     @abstractmethod
-    def get_by_id(self, workspace_id: int) -> Optional[Workspace]:
+    def get_by_id(self, workspace_id: str) -> Optional[Workspace]:
         pass
 
     @abstractmethod
-    def update(self, workspace_id: int, workspace_update: WorkspaceUpdate) -> Optional[Workspace]:
+    def update(self, workspace_id: str, workspace_update: WorkspaceUpdate) -> Optional[Workspace]:
         pass
 
     @abstractmethod
-    def delete(self, workspace_id: int) -> bool:
+    def delete(self, workspace_id: str) -> bool:
         pass

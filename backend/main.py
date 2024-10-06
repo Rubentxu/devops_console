@@ -3,7 +3,8 @@ from src.infrastructure.config.app_config import create_app
 from src.infrastructure.utils.environment import load_environment_variables
 from src.infrastructure.utils.logger import setup_logger
 from src.infrastructure.repositories.in_memory_task_repository import InMemoryTaskRepository
-from src.infrastructure.repositories.in_memory_workspace_tenant_repository import InMemoryTenantRepository, InMemoryWorkspaceRepository
+from src.infrastructure.repositories.in_memory_tenant_repository import InMemoryTenantRepository
+from src.infrastructure.repositories.in_memory_workspace_repository import InMemoryWorkspaceRepository
 from src.application.task_service import TaskService, TaskCreate, TaskUpdate, TaskExecuted
 from src.application.workspace_service import WorkspaceService, WorkspaceCreate
 from src.application.tenant_service import TenantService, TenantCreate
@@ -12,6 +13,7 @@ from src.infrastructure.routes.workspace_routes import create_workspace_router
 from colorama import init as colorama_init
 import json
 import uvicorn
+from src.infrastructure.routes.tenant_routes import create_tenant_router
 
 def initialize_repositories():
     return InMemoryTaskRepository(), InMemoryTenantRepository(), InMemoryWorkspaceRepository()
@@ -48,9 +50,11 @@ def main():
 
     task_router = create_task_router(task_service)
     workspace_router = create_workspace_router(workspace_service)
+    tenant_router = create_tenant_router(tenant_service)  # Nue
 
     app.include_router(task_router)
     app.include_router(workspace_router)
+    app.include_router(tenant_router)  # Nuevo
 
     @app.get('/')
     def read_root():

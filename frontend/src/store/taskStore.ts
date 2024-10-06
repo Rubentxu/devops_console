@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Task, TaskExecution, TaskStatus } from "../types";
+import { Task, TaskExecution, TaskStatus } from "../types/taskTypes";
 import { config } from "../config";
 
 interface TaskStore {

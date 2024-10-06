@@ -6,6 +6,8 @@ import {
   FaTasks,
   FaStream,
   FaCog,
+  FaLayerGroup, // Nuevo ícono para Workspaces
+  FaBuilding, // Nuevo ícono para Tenants
 } from "react-icons/fa";
 
 interface SidebarProps {
@@ -39,6 +41,21 @@ const Sidebar: React.FC<SidebarProps> = ({ username }) => {
           >
             <FaStream className="mr-2" />
             Pipelines
+          </Link>
+        </li>
+        <li className="mb-4">
+          <Link to="/tenants" className="flex items-center hover:text-blue-300">
+            <FaBuilding className="mr-2" />
+            Tenants
+          </Link>
+        </li>
+        <li className="mb-4">
+          <Link
+            to="/workspaces"
+            className="flex items-center hover:text-blue-300"
+          >
+            <FaLayerGroup className="mr-2" />
+            Workspaces
           </Link>
         </li>
         <li className="mb-4">
