@@ -4,6 +4,8 @@ from datetime import datetime
 from enum import Enum
 import uuid
 
+from src.infrastructure.workers.worker_types import WorkerType
+
 class TaskStatus(str, Enum):
     PENDING = 'Pending'
     IN_PROGRESS = 'InProgress'
@@ -37,6 +39,7 @@ class Task(BaseModel):
     name: str
     task_type: str
     technology: str
+    worker_type: Optional[WorkerType] = None
     description: Optional[str] = None
     extended_info: Optional[str] = None
     tags: List[str] = []

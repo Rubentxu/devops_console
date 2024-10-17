@@ -29,9 +29,77 @@
   "tasks": [
     {
       "workspace_id": "1",
+      "name": "Deploy Application to OpenShift",
+      "task_type": "deployment",
+      "technology": "OpenShift",
+ "worker_type": "OpenShift",
+      "description": "Deploy the application to OpenShift cluster",
+      "extended_info": "Use the latest container image for deployment",
+      "tags": ["deployment", "openshift"],
+      "forms": [
+        {
+          "id": "form1",
+          "name": "OpenShift Deployment Form",
+          "fields": {
+            "project": "my-app",
+            "replicas": "3",
+            "image": "quay.io/myorg/myapp:latest",
+            "cpu_limit": "500m",
+            "memory_limit": "512Mi",
+            "healthcheck_path": "/health",
+            "route_hostname": "myapp.apps.example.com"
+          }
+        }
+      ],
+      "approvals": [
+        {
+          "id": "approval1",
+          "user_id": "user1",
+          "approved": true,
+          "approval_date": "2023-05-01T10:00:00Z"
+        }
+      ],
+      "metadata": {
+        "priority": "high",
+        "estimated_duration": "30m"
+      },
+      "tasks_executed": []
+    },
+    {
+      "workspace_id": "2",
+      "name": "Configure OpenShift CI/CD Pipeline",
+      "task_type": "ci",
+      "technology": "OpenShift Pipelines",
+ "worker_type": "OpenShift",
+      "description": "Set up a Continuous Integration/Continuous Deployment pipeline in OpenShift",
+      "extended_info": "Configure Tekton pipeline for automated builds and deployments",
+      "tags": ["ci", "cd", "openshift", "tekton"],
+      "forms": [
+        {
+          "id": "form2",
+          "name": "OpenShift Pipeline Configuration",
+          "fields": {
+            "git_repo": "https://github.com/example/repo.git",
+            "git_revision": "main",
+            "image_repo": "image-registry.openshift-image-registry.svc:5000/my-app/myapp",
+            "deployment_name": "myapp",
+            "deployment_namespace": "my-app"
+          }
+        }
+      ],
+      "approvals": [],
+      "metadata": {
+        "priority": "medium",
+        "estimated_duration": "45m"
+      },
+      "tasks_executed": []
+    },
+    {
+      "workspace_id": "1",
       "name": "Deploy Application",
       "task_type": "deployment",
       "technology": "Kubernetes",
+ "worker_type": "Kubernetes",
       "description": "Deploy the application to Kubernetes cluster",
       "extended_info": "Use the latest Docker image for deployment",
       "tags": ["deployment", "kubernetes"],
@@ -78,6 +146,7 @@
       "name": "Configure CI Pipeline",
       "task_type": "ci",
       "technology": "Jenkins",
+ "worker_type": "Kubernetes",
       "description": "Set up a Continuous Integration pipeline",
       "extended_info": "Configure Jenkins job for automated builds and tests",
       "tags": ["ci", "jenkins", "automation"],
@@ -107,6 +176,7 @@
       "name": "Provision Cloud Infrastructure",
       "task_type": "infrastructure",
       "technology": "Terraform",
+ "worker_type": "Openshift",
       "description": "Provision cloud resources using Terraform",
       "extended_info": "Create VPC, subnets, and EC2 instances on AWS",
       "tags": ["infrastructure", "terraform", "aws"],
@@ -145,6 +215,7 @@
       "name": "Run Tests",
       "task_type": "testing",
       "technology": "Jest",
+ "worker_type": "Kubernetes",
       "description": "Run automated tests for the application",
       "tags": ["testing", "automation"],
       "forms": [],
@@ -160,6 +231,7 @@
       "name": "Build Docker Image",
       "task_type": "build",
       "technology": "Docker",
+ "worker_type": "Docker",
       "description": "Build a Docker image for the application",
       "extended_info": "Use multi-stage build for optimized image size",
       "tags": ["build", "docker", "ci"],
@@ -185,6 +257,7 @@
       "name": "Configure Monitoring",
       "task_type": "monitoring",
       "technology": "Prometheus",
+ "worker_type": "Kubernetes",
       "description": "Set up Prometheus monitoring for the application",
       "extended_info": "Configure alerting rules and Grafana dashboards",
       "tags": ["monitoring", "prometheus", "grafana"],
@@ -201,6 +274,7 @@
       "name": "Database Migration",
       "task_type": "database",
       "technology": "Flyway",
+ "worker_type": "Kubernetes",
       "description": "Run database migration scripts",
       "extended_info": "Apply schema changes and data updates",
       "tags": ["database", "migration", "flyway"],
@@ -232,7 +306,7 @@
   "workers": [
     {
       "name": "Kubernetes Worker",
-      "type": "kubernetes",
+      "type": "Kubernetes",
       "config": {
         "namespace": "default",
         "job_template": {
@@ -260,7 +334,7 @@
     },
     {
       "name": "Docker Worker",
-      "type": "docker",
+      "type": "Docker",
       "config": {
         "image": "busybox",
         "command": "echo 'Hello from Docker!'",
@@ -277,7 +351,7 @@
     },
     {
       "name": "Podman Worker",
-      "type": "podman",
+      "type": "Podman",
       "config": {
         "image": "busybox",
         "command": "echo 'Hello from Podman!'",
@@ -289,6 +363,34 @@
             "target": "/container/path",
             "type": "bind",
             "read_only": true
+          }
+        }
+      }
+    },
+    {
+      "name": "OpenShift Worker",
+      "type": "openshift",
+      "config": {
+        "project": "default",
+        "job_template": {
+          "apiVersion": "batch/v1",
+          "kind": "Job",
+          "metadata": {
+            "generateName": "openshift-task-"
+          },
+          "spec": {
+            "template": {
+              "spec": {
+                "containers": [
+                  {
+                    "name": "task",
+                    "image": "quay.io/openshift/origin-cli:latest",
+                    "command": ["echo", "Hello from OpenShift!"]
+                  }
+                ],
+                "restartPolicy": "Never"
+              }
+            }
           }
         }
       }

@@ -1,62 +1,61 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 from pydantic import BaseModel
+from .worker_types import WorkerType
 
-class WorkerConfig(BaseModel, ABC):
-    type: str
-    
-    @abstractmethod
-    def get_launch_config(self) -> Dict[str, Any]:
-        pass
+import logging
 
-class KubernetesConfig(WorkerConfig):
-    type: str = "kubernetes"
-    namespace: str = "default"
-    job_template: Dict[str, Any]
+# Configuración básica del logger
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-    def get_launch_config(self) -> Dict[str, Any]:
-        return {
-            "namespace": self.namespace,
-            "job_template": self.job_template
-        }
-
-class DockerConfig(WorkerConfig):
-    type: str = "docker"
-    image: str
-    command: str = None
-    environment: Dict[str, str] = {}
-    volumes: Dict[str, Dict[str, str]] = {}
+class WorkerConfig:
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
 
     def get_launch_config(self) -> Dict[str, Any]:
-        return {
-            "image": self.image,
-            "command": self.command,
-            "environment": self.environment,
-            "volumes": self.volumes
-        }
+        return self.config
 
-class PodmanConfig(WorkerConfig):
-    type: str = "podman"
-    image: str
-    command: str = None
-    environment: Dict[str, str] = {}
-    mounts: Dict[str, Dict[str, str]] = {}
+class KubernetesWorkerConfig(WorkerConfig):
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.namespace = config.get('namespace', 'default')
+        self.job_template = config.get('job_template', {})
 
-    def get_launch_config(self) -> Dict[str, Any]:
-        return {
-            "image": self.image,
-            "command": self.command,
-            "environment": self.environment,
-            "mounts": self.mounts
-        }
+class DockerWorkerConfig(WorkerConfig):
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.image = config['image']
+        self.command = config['command']
+        self.environment = config.get('environment', {})
+        self.volumes = config.get('volumes', {})
 
-def get_worker_config(config: Dict[str, Any]) -> WorkerConfig:
-    worker_type = config.get("type")
-    if worker_type == "kubernetes":
-        return KubernetesConfig(**config)
-    elif worker_type == "docker":
-        return DockerConfig(**config)
-    elif worker_type == "podman":
-        return PodmanConfig(**config)
+class PodmanWorkerConfig(WorkerConfig):
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.image = config['image']
+        self.command = config['command']
+        self.environment = config.get('environment', {})
+        self.mounts = config.get('mounts', {})
+
+class OpenShiftWorkerConfig(WorkerConfig):
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.project = config.get('project', 'default')
+        self.job_template = config.get('job_template', {})
+
+def get_worker_config(worker_data: Dict[str, Any]) -> WorkerConfig:
+    worker_type = worker_data['type'].upper()
+    config = worker_data['config']
+
+    if worker_type == 'KUBERNETES':
+        return KubernetesWorkerConfig(config)
+    elif worker_type == 'DOCKER':
+        return DockerWorkerConfig(config)
+    elif worker_type == 'PODMAN':
+        return PodmanWorkerConfig(config)
+    elif worker_type == 'OPENSHIFT':
+        return OpenShiftWorkerConfig(config)
     else:
         raise ValueError(f"Unsupported worker type: {worker_type}")
+

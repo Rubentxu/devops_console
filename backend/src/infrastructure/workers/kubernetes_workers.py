@@ -2,10 +2,10 @@ import asyncio
 from typing import AsyncIterable
 from kubernetes import client, watch
 from .abstractions import JobLauncher, JobMonitor, LogStreamer
-from .worker_config import KubernetesConfig
+from .worker_config import KubernetesWorkerConfig
 
 class KubernetesJobLauncher(JobLauncher):
-    def __init__(self, batch_v1: client.BatchV1Api, config: KubernetesConfig):
+    def __init__(self, batch_v1: client.BatchV1Api, config: KubernetesWorkerConfig):
         self.batch_v1 = batch_v1
         self.config = config
 
