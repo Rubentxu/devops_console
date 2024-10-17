@@ -1,20 +1,19 @@
-package task
+package domain
 
 import (
+	domain "devops_console/internal/domain/worker"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type TaskStatus string
 
 const (
-	TaskStatusPending            TaskStatus = "Pending"
-	TaskStatusInProgress         TaskStatus = "InProgress"
-	TaskStatusCompleted          TaskStatus = "Completed"
-	TaskStatusFailed             TaskStatus = "Failed"
-	TaskStatusScheduled          TaskStatus = "Scheduled"
-	TaskStatusPendingValidation  TaskStatus = "PendingValidation"
+	TaskStatusPending           TaskStatus = "Pending"
+	TaskStatusInProgress        TaskStatus = "InProgress"
+	TaskStatusCompleted         TaskStatus = "Completed"
+	TaskStatusFailed            TaskStatus = "Failed"
+	TaskStatusScheduled         TaskStatus = "Scheduled"
+	TaskStatusPendingValidation TaskStatus = "PendingValidation"
 )
 
 type Form struct {
@@ -39,46 +38,50 @@ type TaskExecuted struct {
 }
 
 type Task struct {
-	ID           string                 `json:"id"`
-	CreateAt     time.Time              `json:"create_at"`
-	WorkspaceID  string                 `json:"workspace_id"`
-	Name         string                 `json:"name"`
-	TaskType     string                 `json:"task_type"`
-	Technology   string                 `json:"technology"`
-	WorkerType   *string                `json:"worker_type,omitempty"`
-	Description  *string                `json:"description,omitempty"`
-	ExtendedInfo *string                `json:"extended_info,omitempty"`
-	Tags         []string               `json:"tags"`
-	Forms        []Form                 `json:"forms"`
-	Approvals    []Approval             `json:"approvals"`
-	Metadata     map[string]string      `json:"metadata"`
-	TasksExecuted []TaskExecuted        `json:"tasks_executed"`
+	ID            string              `json:"id"`
+	CreatedAt     time.Time           `json:"created_at"`
+	WorkspaceID   string              `json:"workspace_id"`
+	Name          string              `json:"name"`
+	TaskType      string              `json:"task_type"`
+	Technology    string              `json:"technology"`
+	WorkerType    string              `json:"worker_type,omitempty"`
+	Description   string              `json:"description,omitempty"`
+	ExtendedInfo  string              `json:"extended_info,omitempty"`
+	Tags          *[]string           `json:"tags"`
+	Forms         *[]Form             `json:"forms"`
+	Approvals     *[]Approval         `json:"approvals"`
+	Metadata      map[string]string   `json:"metadata"`
+	TasksExecuted []TaskExecuted      `json:"tasks_executed"`
+	WorkerConfig  domain.WorkerConfig `json:"worker_config"`
 }
 
 type TaskCreate struct {
-	WorkspaceID  string            `json:"workspace_id"`
-	Name         string            `json:"name"`
-	TaskType     string            `json:"task_type"`
-	Technology   string            `json:"technology"`
-	Description  *string           `json:"description,omitempty"`
-	ExtendedInfo *string           `json:"extended_info,omitempty"`
-	Tags         []string          `json:"tags"`
-	Forms        []Form            `json:"forms"`
-	Approvals    []Approval        `json:"approvals"`
-	Metadata     map[string]string `json:"metadata"`
+	WorkspaceID  string              `json:"workspace_id"`
+	Name         string              `json:"name"`
+	TaskType     string              `json:"task_type"`
+	Technology   string              `json:"technology"`
+	Description  string              `json:"description,omitempty"`
+	ExtendedInfo string              `json:"extended_info,omitempty"`
+	Tags         *[]string           `json:"tags"`
+	Forms        *[]Form             `json:"forms"`
+	Approvals    *[]Approval         `json:"approvals"`
+	Metadata     map[string]string   `json:"metadata"`
+	WorkerConfig domain.WorkerConfig `json:"worker_config"`
 }
 
 type TaskUpdate struct {
-	Title        *string           `json:"title,omitempty"`
-	TaskType     *string           `json:"task_type,omitempty"`
-	Technology   *string           `json:"technology,omitempty"`
-	Description  *string           `json:"description,omitempty"`
-	ExtendedInfo *string           `json:"extended_info,omitempty"`
-	Tags         *[]string         `json:"tags,omitempty"`
-	Forms        *[]Form           `json:"forms,omitempty"`
-	Approvals    *[]Approval       `json:"approvals,omitempty"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
-	TasksExecuted *[]TaskExecuted  `json:"tasks_executed,omitempty"`
+	ID            string              `json:"id,omitempty"`
+	Name          string              `json:"name,omitempty"`
+	TaskType      string              `json:"task_type,omitempty"`
+	Technology    string              `json:"technology,omitempty"`
+	Description   string              `json:"description,omitempty"`
+	ExtendedInfo  string              `json:"extended_info,omitempty"`
+	Tags          *[]string           `json:"tags,omitempty"`
+	Forms         *[]Form             `json:"forms,omitempty"`
+	Approvals     *[]Approval         `json:"approvals,omitempty"`
+	Metadata      map[string]string   `json:"metadata,omitempty"`
+	TasksExecuted *[]TaskExecuted     `json:"tasks_executed,omitempty"`
+	WorkerConfig  domain.WorkerConfig `json:"worker_config,omitempty"`
 }
 
 type TaskRepository interface {

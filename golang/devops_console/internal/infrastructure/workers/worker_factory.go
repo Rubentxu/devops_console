@@ -1,49 +1,34 @@
-package factories
+package infra
 
 import (
-    "devops_console/internal/domain/worker"
-    "devops_console/internal/infrastructure/workers"
-    "errors"
+	domain "devops_console/internal/domain/worker"
+	"fmt"
+	"sync"
 )
 
 type WorkerFactory struct {
-    kubeconfig string
-    namespace  string
+	workers map[domain.WorkerType]domain.Worker
+	mu      sync.RWMutex
 }
 
-func NewWorkerFactory(kubeconfig, namespace string) *WorkerFactory {
-    return &WorkerFactory{
-        kubeconfig: kubeconfig,
-        namespace:  namespace,
-    }
+func NewWorkerFactory() *WorkerFactory {
+	return &WorkerFactory{
+		workers: make(map[domain.WorkerType]domain.Worker),
+	}
 }
 
-func (f *WorkerFactory) GetJobLauncher(workerType worker.WorkerType) (workers.JobLauncher, error) {
-    switch workerType {
-    case worker.WorkerTypeOpenShift:
-        return workers.NewOpenShiftWorker(f.kubeconfig, f.namespace)
-    // Añadir casos para otros tipos de workers
-    default:
-        return nil, errors.New("unsupported worker type")
-    }
+func (f *WorkerFactory) RegisterWorker(workerType domain.WorkerType, worker domain.Worker) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.workers[workerType] = worker
 }
 
-func (f *WorkerFactory) GetJobMonitor(workerType worker.WorkerType) (workers.JobMonitor, error) {
-    switch workerType {
-    case worker.WorkerTypeOpenShift:
-        return workers.NewOpenShiftWorker(f.kubeconfig, f.namespace)
-    // Añadir casos para otros tipos de workers
-    default:
-        return nil, errors.New("unsupported worker type")
-    }
-}
-
-func (f *WorkerFactory) GetLogStreamer(workerType worker.WorkerType) (workers.LogStreamer, error) {
-    switch workerType {
-    case worker.WorkerTypeOpenShift:
-        return workers.NewOpenShiftWorker(f.kubeconfig, f.namespace)
-    // Añadir casos para otros tipos de workers
-    default:
-        return nil, errors.New("unsupported worker type")
-    }
+func (f *WorkerFactory) GetWorker(workerType domain.WorkerType) (domain.Worker, error) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	worker, exists := f.workers[workerType]
+	if !exists {
+		return nil, fmt.Errorf("worker type %s not registered", workerType)
+	}
+	return worker, nil
 }

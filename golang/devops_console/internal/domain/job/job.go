@@ -1,4 +1,4 @@
-package job
+package domain
 
 import (
 	"time"
@@ -14,15 +14,15 @@ const (
 )
 
 type Job struct {
-	ID        string                 `json:"id"`
-	WorkerID  string                 `json:"worker_id"`
-	Name      string                 `json:"name"`
-	Status    JobStatus              `json:"status"`
-	CreatedAt time.Time              `json:"created_at"`
-	StartedAt *time.Time             `json:"started_at,omitempty"`
-	FinishedAt *time.Time            `json:"finished_at,omitempty"`
-	Result    *string                `json:"result,omitempty"`
-	Metadata  map[string]interface{} `json:"metadata"`
+	ID         string                 `json:"id"`
+	WorkerID   string                 `json:"worker_id"`
+	Name       string                 `json:"name"`
+	Status     JobStatus              `json:"status"`
+	CreatedAt  time.Time              `json:"created_at"`
+	StartedAt  *time.Time             `json:"started_at,omitempty"`
+	FinishedAt *time.Time             `json:"finished_at,omitempty"`
+	Result     *string                `json:"result,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata"`
 }
 
 type JobCreate struct {
@@ -32,11 +32,11 @@ type JobCreate struct {
 }
 
 type JobUpdate struct {
-	Status     *JobStatus              `json:"status,omitempty"`
-	StartedAt  *time.Time              `json:"started_at,omitempty"`
-	FinishedAt *time.Time              `json:"finished_at,omitempty"`
-	Result     *string                 `json:"result,omitempty"`
-	Metadata   map[string]interface{}  `json:"metadata,omitempty"`
+	Status     *JobStatus             `json:"status,omitempty"`
+	StartedAt  *time.Time             `json:"started_at,omitempty"`
+	FinishedAt *time.Time             `json:"finished_at,omitempty"`
+	Result     *string                `json:"result,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
 
 type JobRepository interface {

@@ -1,59 +1,66 @@
 import { create } from "zustand";
-import { Task, TaskExecution, TaskStatus } from "../types/taskTypes";
-import { config } from "../config";
-import TaskExecution from "../pages/TaskExecution";
+import { Task, TaskStatus } from "../types/taskTypes";
+import { 
+  CreateTask, 
+  GetAllTasks, 
+  GetTaskByID, 
+  UpdateTask, 
+  DeleteTask, 
+  ExecuteTask,
+  ExecuteTaskWithTimeout,
+  PauseTask,
+  ResumeTask,
+  GetTaskStatus,
+  GetTaskStatistics,
+  MonitorTask,
+  StreamTaskLogs,
+  ExecuteAndMonitorTask
+} from '../wailsjs/go/interfaces/App';
+import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime';
+
+interface TaskExecution {
+  id: string;
+  taskId: string;
+  status: TaskStatus;
+  logs: string[];
+  error?: string;
+}
 
 interface TaskStore {
   tasks: Task[];
   currentTask: Task | null;
   taskExecution: TaskExecution | null;
-  taskExecutionUrl: string | null;
   taskStats: {
     inProgress: number;
     completed: number;
     failed: number;
   };
-  socket: WebSocket | null;
   fetchTasks: () => Promise<void>;
   setCurrentTask: (task: Task | null) => void;
-  executeTask: (
-    taskId: string,
-    formData: Record<string, unknown>,
-  ) => Promise<void>;
-  updateTaskExecution: (log: string) => void;
-  setTaskExecutionUrl: (url: string | null) => void;
-  connectWebSocket: (taskId: string) => Promise<void>;
-  disconnectWebSocket: () => void;
+  createTask: (taskCreate: any) => Promise<Task | null>;
+  executeTask: (taskId: string) => Promise<void>;
+  monitorTask: (taskId: string) => Promise<void>;
+  streamTaskLogs: (taskId: string) => Promise<void>;
+  executeAndMonitorTask: (taskId: string) => Promise<void>;
+  pauseTask: (taskId: string) => Promise<void>;
+  resumeTask: (taskId: string) => Promise<void>;
+  getTaskStatus: (taskId: string) => Promise<string>;
   updateTaskStats: (status: TaskStatus) => void;
-}
-
-type WebSocketEventType = "launch" | "log" | "status" | "error" | "close";
-
-interface WebSocketEvent {
-  type: WebSocketEventType;
-  message?: string;
-  status?: TaskStatus;
 }
 
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   currentTask: null,
-  taskExecution: "initializing",
-  taskExecutionUrl: null,
+  taskExecution: null,
   taskStats: {
     inProgress: 0,
     completed: 0,
     failed: 0,
   },
-  socket: null,
 
   fetchTasks: async () => {
     try {
-      const response = await fetch(`${config.apiUrl}/tasks`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch tasks");
-      }
-      const tasks = await response.json();
+      const tasks = await GetAllTasks();
       set({ tasks });
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -62,148 +69,75 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   setCurrentTask: (task) => set({ currentTask: task }),
 
-  executeTask: async (taskId, formData) => {
+  createTask: async (taskCreate) => {
     try {
-      const response = await fetch(`${config.apiUrl}/tasks/${taskId}/execute`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ form_data: formData }),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to execute task");
-      }
-      const executionData = await response.json();
-      set({
-        taskExecution: {
-          id: executionData.task_id,
-          taskId: taskId,
-          status: executionData.status,
-          logs: [],
-        },
-        taskExecutionUrl: `/task-execution/${taskId}`,
-      });
-      return executionData;
+      const task = await CreateTask(taskCreate);
+      set(state => ({ tasks: [...state.tasks, task] }));
+      return task;
     } catch (error) {
-      console.error("Error executing task:", error);
-      throw error;
+      console.error("Error creating task:", error);
+      return null;
     }
   },
 
-  connectWebSocket: async (taskId: string) => {
-    await new Promise((resolve) => setTimeout(resolve, config.websocket_delay));
-
-    const socket = new WebSocket(
-      `ws://${config.apiUrl.replace(/^https?:\/\//, "")}/ws/task/${taskId}`,
-    );
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data) as WebSocketEvent;
-      switch (data.type) {
-        case "launch":
-          console.log("Task launched:", data.message);
-          set((state) => ({
-            taskExecution: state.taskExecution
-              ? { ...state.taskExecution, status: "running" }
-              : null,
-          }));
-          get().updateTaskStats("running");
-          break;
-        case "log":
-          if (data.message) {
-            set((state) => ({
-              taskExecution: state.taskExecution
-                ? {
-                    ...state.taskExecution,
-                    logs: [...state.taskExecution.logs, data.message],
-                  }
-                : null,
-            }));
-          }
-          break;
-        case "status":
-          if (data.status) {
-            set((state) => ({
-              taskExecution: state.taskExecution
-                ? { ...state.taskExecution, status: data.status }
-                : null,
-            }));
-            get().updateTaskStats(data.status);
-            if (data.status === "Succeeded") {
-              get().disconnectWebSocket();
-            }
-          }
-          break;
-        case "error":
-          console.error("Task error:", data.message);
-          set((state) => ({
-            taskExecution: state.taskExecution
-              ? {
-                  ...state.taskExecution,
-                  error: data.message,
-                  status: "failed",
-                }
-              : null,
-          }));
-          get().updateTaskStats("failed");
-          get().disconnectWebSocket();
-          break;
-        case "close":
-          console.log("Task execution finished:", data.message);
-          set((state) => ({
-            taskExecution: state.taskExecution
-              ? { ...state.taskExecution, status: "closed" }
-              : null,
-          }));
-          get().updateTaskStats("closed");
-          get().disconnectWebSocket();
-
-          break;
-        default:
-          console.warn("Unknown event type:", (data as WebSocketEvent).type);
-      }
-    };
-
-    socket.onclose = (event) => {
-      if (!event.wasClean) {
-        console.error("WebSocket connection closed unexpectedly");
-        set((state) => ({
-          taskExecution: state.taskExecution
-            ? {
-                ...state.taskExecution,
-                error: "Connection closed unexpectedly",
-                status: "failed",
-              }
-            : null,
-        }));
-        get().updateTaskStats("failed");
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      set((state) => ({
-        taskExecution: state.taskExecution
-          ? {
-              ...state.taskExecution,
-              error: "WebSocket error occurred",
-              status: "failed",
-            }
-          : null,
-      }));
-      get().updateTaskStats("failed");
-      get().disconnectWebSocket();
-    };
-
-    set({ socket });
+  executeTask: async (taskId) => {
+    try {
+      await ExecuteTask(taskId);
+      // La ejecución real y el monitoreo se manejan a través de eventos
+    } catch (error) {
+      console.error("Error executing task:", error);
+    }
   },
 
-  disconnectWebSocket: () => {
-    const { socket } = get();
-    if (socket) {
-      socket.close();
-      set({ socket: null });
+  monitorTask: async (taskId) => {
+    try {
+      await MonitorTask(taskId);
+      // Los resultados se manejarán a través de eventos
+    } catch (error) {
+      console.error("Error monitoring task:", error);
+    }
+  },
+
+  streamTaskLogs: async (taskId) => {
+    try {
+      await StreamTaskLogs(taskId);
+      // Los logs se manejarán a través de eventos
+    } catch (error) {
+      console.error("Error streaming task logs:", error);
+    }
+  },
+
+  executeAndMonitorTask: async (taskId) => {
+    try {
+      await ExecuteAndMonitorTask(taskId);
+      // Los resultados y actualizaciones se manejarán a través de eventos
+    } catch (error) {
+      console.error("Error executing and monitoring task:", error);
+    }
+  },
+
+  pauseTask: async (taskId) => {
+    try {
+      await PauseTask(taskId);
+    } catch (error) {
+      console.error("Error pausing task:", error);
+    }
+  },
+
+  resumeTask: async (taskId) => {
+    try {
+      await ResumeTask(taskId);
+    } catch (error) {
+      console.error("Error resuming task:", error);
+    }
+  },
+
+  getTaskStatus: async (taskId) => {
+    try {
+      return await GetTaskStatus(taskId);
+    } catch (error) {
+      console.error("Error getting task status:", error);
+      return "unknown";
     }
   },
 
@@ -212,7 +146,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       const newStats = { ...state.taskStats };
       if (status === "running") {
         newStats.inProgress += 1;
-      } else if (status === "Succeeded") {
+      } else if (status === "completed") {
         newStats.inProgress -= 1;
         newStats.completed += 1;
       } else if (status === "failed") {
@@ -222,14 +156,79 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       return { taskStats: newStats };
     });
   },
-
-  updateTaskExecution: (log: string) => {
-    set((state) => ({
-      taskExecution: state.taskExecution
-        ? { ...state.taskExecution, logs: [...state.taskExecution.logs, log] }
-        : null,
-    }));
-  },
-
-  setTaskExecutionUrl: (url: string | null) => set({ taskExecutionUrl: url }),
 }));
+
+// Configurar los listeners de eventos
+EventsOn("task:created", (task: Task) => {
+  useTaskStore.setState(state => ({ tasks: [...state.tasks, task] }));
+});
+
+EventsOn("task:updated", (task: Task) => {
+  useTaskStore.setState(state => ({
+    tasks: state.tasks.map(t => t.id === task.id ? task : t)
+  }));
+});
+
+EventsOn("task:deleted", (taskId: string) => {
+  useTaskStore.setState(state => ({
+    tasks: state.tasks.filter(t => t.id !== taskId)
+  }));
+});
+
+EventsOn("task:execution:added", (data: { taskId: string, execution: any }) => {
+  useTaskStore.setState(state => ({
+    tasks: state.tasks.map(t => {
+      if (t.id === data.taskId) {
+        return { ...t, taskExecutions: [...(t.taskExecutions || []), data.execution] };
+      }
+      return t;
+    })
+  }));
+});
+
+EventsOn("task:execution:result", (data: { taskId: string, result: any }) => {
+  useTaskStore.setState(state => ({
+    taskExecution: state.taskExecution && state.taskExecution.taskId === data.taskId
+      ? { ...state.taskExecution, ...data.result }
+      : state.taskExecution
+  }));
+});
+
+EventsOn("task:execution:error", (data: { taskId: string, error: string }) => {
+  useTaskStore.setState(state => ({
+    taskExecution: state.taskExecution && state.taskExecution.taskId === data.taskId
+      ? { ...state.taskExecution, status: "failed", error: data.error }
+      : state.taskExecution
+  }));
+  useTaskStore.getState().updateTaskStats("failed");
+});
+
+EventsOn("task:status:update", (data: { taskId: string, status: TaskStatus }) => {
+  useTaskStore.setState(state => ({
+    taskExecution: state.taskExecution && state.taskExecution.taskId === data.taskId
+      ? { ...state.taskExecution, status: data.status }
+      : state.taskExecution
+  }));
+  useTaskStore.getState().updateTaskStats(data.status);
+});
+
+EventsOn("task:log", (data: { taskId: string, log: string }) => {
+  useTaskStore.setState(state => ({
+    taskExecution: state.taskExecution && state.taskExecution.taskId === data.taskId
+      ? { ...state.taskExecution, logs: [...state.taskExecution.logs, data.log] }
+      : state.taskExecution
+  }));
+});
+
+// Asegúrate de limpiar los listeners cuando ya no sean necesarios
+// Esto podría hacerse en un componente de nivel superior cuando se desmonte
+const cleanupEventListeners = () => {
+  EventsOff("task:created");
+  EventsOff("task:updated");
+  EventsOff("task:deleted");
+  EventsOff("task:execution:added");
+  EventsOff("task:execution:result");
+  EventsOff("task:execution:error");
+  EventsOff("task:status:update");
+  EventsOff("task:log");
+};

@@ -5,7 +5,7 @@ import (
 
  	"log"
 
-    "devops_console/internal/infrastructure/config"
+    
     "devops_console/internal/interfaces"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -28,7 +28,7 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        app.startup,
+		OnStartup:        app.Startup,
 		Bind: []interface{}{
 			app,
 		},
