@@ -179,3 +179,19 @@ func (s *TaskServiceImpl) SubscribeToTaskEvents(executionID string) (<-chan enti
 
 	return executor.SubscribeToTaskEvents(executionID)
 }
+
+func (s *TaskServiceImpl) GetTaskStatus(executionID string) (entities.TaskStatus, error) {
+	ctx := context.Background()
+	task, err := s.repository.GetByExecutionID(ctx, executionID)
+	if err != nil {
+		return "", err
+	}
+
+	for _, execution := range task.Executions {
+		if execution.ID == executionID {
+			return execution.Status, nil
+		}
+	}
+
+	return "", errors.New("execution not found")
+}
