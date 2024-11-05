@@ -1,3 +1,4 @@
+// internal/infrastructure/repositories/memory_task_repository.go
 package adapters
 
 import (
@@ -59,4 +60,17 @@ func (r *InMemoryTaskRepository) GetAll(ctx context.Context, filters ports.TaskF
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
+}
+
+func (r *InMemoryTaskRepository) GetByExecutionID(ctx context.Context, executionID string) (entities.DevOpsTask, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, task := range r.tasks {
+		for _, execution := range task.Executions {
+			if execution.ID == executionID {
+				return task, nil
+			}
+		}
+	}
+	return entities.DevOpsTask{}, fmt.Errorf("task not found")
 }

@@ -6,34 +6,147 @@ import (
 	"devops_console/internal/domain/entities"
 	eventstream "devops_console/internal/infrastructure/events"
 	executor "devops_console/internal/infrastructure/executors"
-	"devops_console/internal/infrastructure/repositories"
+	adapters "devops_console/internal/infrastructure/repositories"
 	workers "devops_console/internal/infrastructure/workers"
-
 	"log"
 	"testing"
 	"time"
 )
 
-func TestTaskExecution(t *testing.T) {
-	// Configurar el contexto
+func TestTaskExecutionWithDockerWorker(t *testing.T) {
+	// Setup context
 	_ = context.Background()
 
-	// Crear el TaskEventStream
+	// Create the TaskEventStream
 	eventStream := eventstream.NewTaskEventStream()
 
-	// Crear el TaskExecutor
-	executor, err := executor.NewK8sTaskExecutor("default", eventStream)
+	// Create the TaskExecutor
+	dockerExecutor, err := executor.NewDockerTaskExecutor(eventStream)
 	if err != nil {
-		t.Fatalf("Error al crear K8sTaskExecutor: %v", err)
+		t.Fatalf("Error creating DockerTaskExecutor: %v", err)
 	}
 
-	// Crear el TaskRepository en memoria
+	k8sExecutor, err := executor.NewK8sTaskExecutor("default", eventStream)
+	if err != nil {
+		t.Fatalf("Error creating K8sTaskExecutor: %v", err)
+	}
+
+	// Create the TaskRepository in memory
 	taskRepo := adapters.NewInMemoryTaskRepository()
 
-	// Crear el TaskService
-	taskService := application.NewTaskServiceImpl(taskRepo, executor)
+	// Create the TaskService
+	taskService := application.NewTaskServiceImpl(taskRepo)
+	taskService.RegisterExecutor("Docker", dockerExecutor)
+	taskService.RegisterExecutor("Kubernetes", k8sExecutor)
 
-	// Crear una tarea de ejemplo
+	// Create a sample task with a Docker worker
+	task := entities.DevOpsTask{
+		ID:          "task-1",
+		Name:        "integration-tests-task",
+		Description: "A task for testing purposes",
+		Config: entities.TaskConfig{
+			Parameters: map[string]interface{}{
+				"arg": "argumento 1",
+			},
+		},
+		Worker: &workers.DockerWorker{
+			Name:    "pruebas",
+			Image:   "busybox",
+			Command: []string{"sh", "-c", "for i in $(seq 1 5); do echo \"Linea traza $i\"; sleep 1; done"},
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	// Save the task in the repository
+	_, err = taskService.CreateTask(task)
+	if err != nil {
+		t.Fatalf("Error creating task: %v", err)
+	}
+
+	// Execute the task
+	executionID, err := taskService.ExecuteTask(task.ID)
+	if err != nil {
+		t.Fatalf("Error executing task: %v", err)
+	}
+
+	// Subscribe to task events
+	eventChan, err := taskService.SubscribeToTaskEvents(executionID)
+	if err != nil {
+		t.Fatalf("Error subscribing to task events: %v", err)
+	}
+
+	// Create a channel to signal when the task is done
+	doneChan := make(chan struct{})
+
+	// Variable to store the final status of the task
+	var finalStatus entities.TaskStatus
+
+	// Goroutine to receive and process events
+	go func() {
+		for event := range eventChan {
+			t.Logf("Event received: %s for execution %s (%s)", event.EventType, event.ExecutionID, event.Payload)
+			switch event.EventType {
+			case entities.EventTypeTaskOutput:
+				t.Logf("Log: %s", event.Payload)
+			case entities.EventTypeTaskCompleted:
+				log.Printf("Task completed successfully")
+				finalStatus = entities.TaskSucceeded
+				close(doneChan)
+				return
+			case entities.EventTypeTaskFailed:
+				log.Printf("Task failed")
+				finalStatus = entities.TaskFailed
+				close(doneChan)
+				return
+			case entities.EventTypeTaskError:
+				log.Printf("Task encountered a critical error")
+				finalStatus = entities.TaskError
+				close(doneChan)
+				return
+			}
+		}
+		// Detect unexpected channel closure
+		log.Printf("Event channel closed unexpectedly")
+		finalStatus = entities.TaskSucceeded
+		close(doneChan)
+	}()
+
+	// Wait for the task to complete or timeout
+	select {
+	case <-doneChan:
+		t.Logf("Task completed with status: %s", finalStatus)
+	case <-time.After(30 * time.Second):
+		t.Fatalf("Task did not complete in the expected time")
+	}
+
+	// Verify that the task completed successfully
+	if finalStatus != entities.TaskSucceeded {
+		t.Fatalf("Task did not complete successfully, final status: %s", finalStatus)
+	}
+}
+
+func TestTaskExecutionWithKubernetesWorker(t *testing.T) {
+	// Setup context
+	_ = context.Background()
+
+	// Create the TaskEventStream
+	eventStream := eventstream.NewTaskEventStream()
+
+	// Create the TaskExecutor
+	k8sExecutor, err := executor.NewK8sTaskExecutor("default", eventStream)
+	if err != nil {
+		t.Fatalf("Error creating K8sTaskExecutor: %v", err)
+	}
+
+	// Create the TaskRepository in memory
+	taskRepo := adapters.NewInMemoryTaskRepository()
+
+	// Create the TaskService
+	taskService := application.NewTaskServiceImpl(taskRepo)
+	taskService.RegisterExecutor("Kubernetes", k8sExecutor)
+
+	// Create a sample task with a Kubernetes worker
 	task := entities.DevOpsTask{
 		ID:          "task-1",
 		Name:        "integration-tests-task",
@@ -53,177 +166,70 @@ func TestTaskExecution(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	// Guardar la tarea en el repositorio
+	// Save the task in the repository
 	_, err = taskService.CreateTask(task)
 	if err != nil {
-		t.Fatalf("Error al crear la tarea: %v", err)
+		t.Fatalf("Error creating task: %v", err)
 	}
 
-	// Ejecutar la tarea
+	// Execute the task
 	executionID, err := taskService.ExecuteTask(task.ID)
 	if err != nil {
-		t.Fatalf("Error al ejecutar la tarea: %v", err)
+		t.Fatalf("Error executing task: %v", err)
 	}
 
-	// Suscribirse a los eventos de la tarea
+	// Subscribe to task events
 	eventChan, err := taskService.SubscribeToTaskEvents(executionID)
 	if err != nil {
-		t.Fatalf("Error al suscribirse a los eventos de la tarea: %v", err)
+		t.Fatalf("Error subscribing to task events: %v", err)
 	}
 
-	// Crear un canal para señalizar cuando la tarea haya finalizado
+	// Create a channel to signal when the task is done
 	doneChan := make(chan struct{})
 
-	// Variable para almacenar el estado final de la tarea
+	// Variable to store the final status of the task
 	var finalStatus entities.TaskStatus
 
-	// Goroutine para recibir y procesar eventos
+	// Goroutine to receive and process events
 	go func() {
 		for event := range eventChan {
-			t.Logf("Evento recibido: %s para ejecución %s (%s)", event.EventType, event.ExecutionID, event.Payload)
+			t.Logf("Event received: %s for execution %s (%s)", event.EventType, event.ExecutionID, event.Payload)
 			switch event.EventType {
 			case entities.EventTypeTaskOutput:
 				t.Logf("Log: %s", event.Payload)
 			case entities.EventTypeTaskCompleted:
-				log.Printf("La tarea ha finalizado con éxito")
+				log.Printf("Task completed successfully")
 				finalStatus = entities.TaskSucceeded
 				close(doneChan)
 				return
 			case entities.EventTypeTaskFailed:
-				log.Printf("La tarea ha finalizado con error")
+				log.Printf("Task failed")
 				finalStatus = entities.TaskFailed
 				close(doneChan)
 				return
 			case entities.EventTypeTaskError:
-				log.Printf("La tarea ha finalizado con error crítico")
+				log.Printf("Task encountered a critical error")
 				finalStatus = entities.TaskError
 				close(doneChan)
 				return
 			}
 		}
-		// Detectar cierre inesperado del canal
-		log.Printf("El canal de eventos se cerró inesperadamente")
+		// Detect unexpected channel closure
+		log.Printf("Event channel closed unexpectedly")
 		finalStatus = entities.TaskSucceeded
 		close(doneChan)
 	}()
 
-	// Esperar a que la tarea finalice o se agote el tiempo
+	// Wait for the task to complete or timeout
 	select {
 	case <-doneChan:
-		t.Logf("La tarea ha finalizado con estado: %s", finalStatus)
+		t.Logf("Task completed with status: %s", finalStatus)
 	case <-time.After(30 * time.Second):
-		t.Fatalf("La tarea no finalizó en el tiempo esperado")
+		t.Fatalf("Task did not complete in the expected time")
 	}
 
-	// Verificar que la tarea haya finalizado con éxito
+	// Verify that the task completed successfully
 	if finalStatus != entities.TaskSucceeded {
-		t.Fatalf("La tarea no finalizó correctamente, estado final: %s", finalStatus)
-	}
-}
-
-func TestDockerTaskExecution(t *testing.T) {
-	// Configurar el contexto
-	_ = context.Background()
-
-	// Crear el TaskEventStream
-	eventStream := eventstream.NewTaskEventStream()
-
-	// Crear el TaskExecutor
-	executor, err := executor.NewDockerTaskExecutor(eventStream)
-	if err != nil {
-		t.Fatalf("Error al crear DockerTaskExecutor: %v", err)
-	}
-
-	// Crear el TaskRepository en memoria
-	taskRepo := adapters.NewInMemoryTaskRepository()
-
-	// Crear el TaskService
-	taskService := application.NewTaskServiceImpl(taskRepo, executor)
-
-	// Crear una tarea de ejemplo
-	task := entities.DevOpsTask{
-		ID:          "task-1",
-		Name:        "integration-tests-task",
-		Description: "A task for testing purposes",
-		Config: entities.TaskConfig{
-			Parameters: map[string]interface{}{
-				"args": "arguemento 1",
-			},
-		},
-
-		Worker: &workers.DockerWorker{
-			Name:    "pruebas",
-			Image:   "busybox",
-			Command: []string{"sh", "-c", "for i in $(seq 1 5); do echo \"Linea traza $i\"; sleep 1; done"},
-		},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	// Guardar la tarea en el repositorio
-	_, err = taskService.CreateTask(task)
-	if err != nil {
-		t.Fatalf("Error al crear la tarea: %v", err)
-	}
-
-	// Ejecutar la tarea
-	executionID, err := taskService.ExecuteTask(task.ID)
-	if err != nil {
-		t.Fatalf("Error al ejecutar la tarea: %v", err)
-	}
-
-	// Suscribirse a los eventos de la tarea
-	eventChan, err := taskService.SubscribeToTaskEvents(executionID)
-	if err != nil {
-		t.Fatalf("Error al suscribirse a los eventos de la tarea: %v", err)
-	}
-
-	// Crear un canal para señalizar cuando la tarea haya finalizado
-	doneChan := make(chan struct{})
-
-	// Variable para almacenar el estado final de la tarea
-	var finalStatus entities.TaskStatus
-
-	// Goroutine para recibir y procesar eventos
-	go func() {
-		for event := range eventChan {
-			t.Logf("Evento recibido: %s para ejecución %s (%s)", event.EventType, event.ExecutionID, event.Payload)
-			switch event.EventType {
-			case entities.EventTypeTaskOutput:
-				t.Logf("Log: %s", event.Payload)
-			case entities.EventTypeTaskCompleted:
-				log.Printf("La tarea ha finalizado con éxito")
-				finalStatus = entities.TaskSucceeded
-				close(doneChan)
-				return
-			case entities.EventTypeTaskFailed:
-				log.Printf("La tarea ha finalizado con error")
-				finalStatus = entities.TaskFailed
-				close(doneChan)
-				return
-			case entities.EventTypeTaskError:
-				log.Printf("La tarea ha finalizado con error crítico")
-				finalStatus = entities.TaskError
-				close(doneChan)
-				return
-			}
-		}
-		// Detectar cierre inesperado del canal
-		log.Printf("El canal de eventos se cerró inesperadamente")
-		finalStatus = entities.TaskSucceeded
-		close(doneChan)
-	}()
-
-	// Esperar a que la tarea finalice o se agote el tiempo
-	select {
-	case <-doneChan:
-		t.Logf("La tarea ha finalizado con estado: %s", finalStatus)
-	case <-time.After(30 * time.Second):
-		t.Fatalf("La tarea no finalizó en el tiempo esperado")
-	}
-
-	// Verificar que la tarea haya finalizado con éxito
-	if finalStatus != entities.TaskSucceeded {
-		t.Fatalf("La tarea no finalizó correctamente, estado final: %s", finalStatus)
+		t.Fatalf("Task did not complete successfully, final status: %s", finalStatus)
 	}
 }

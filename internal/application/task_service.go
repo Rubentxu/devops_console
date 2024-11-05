@@ -34,16 +34,20 @@ func defaultIDGenerator() string {
 
 type TaskServiceImpl struct {
 	repository ports.TaskRepository
-	executor   ports.TaskExecutor
+	executors  map[string]ports.TaskExecutor
 	GenerateID IDGenerator
 }
 
-func NewTaskServiceImpl(taskRepo ports.TaskRepository, taskExec ports.TaskExecutor) *TaskServiceImpl {
+func NewTaskServiceImpl(taskRepo ports.TaskRepository) *TaskServiceImpl {
 	return &TaskServiceImpl{
 		repository: taskRepo,
-		executor:   taskExec,
+		executors:  make(map[string]ports.TaskExecutor),
 		GenerateID: defaultIDGenerator,
 	}
+}
+
+func (s *TaskServiceImpl) RegisterExecutor(workerType string, executor ports.TaskExecutor) {
+	s.executors[workerType] = executor
 }
 
 // Implementación de la interfaz TaskService
@@ -116,12 +120,18 @@ func (s *TaskServiceImpl) ExecuteTask(taskID string) (string, error) {
 		return "", err
 	}
 
-	executionID, err := s.executor.ExecuteTask(ctx, &task)
+	worker := task.Worker
+	executor, ok := s.executors[worker.GetType()]
+	if !ok {
+		return "", errors.New("unsupported worker type")
+	}
+
+	executionID, err := executor.ExecuteTask(ctx, &task)
 	if err != nil {
 		return "", err
 	}
 
-	// Actualizar el task con la nueva ejecución
+	// Update the task with the new execution
 	taskExecution := entities.TaskExecution{
 		ID:           executionID,
 		DevOpsTaskID: task.ID,
@@ -139,9 +149,33 @@ func (s *TaskServiceImpl) ExecuteTask(taskID string) (string, error) {
 }
 
 func (s *TaskServiceImpl) CancelTask(executionID string) error {
-	return s.executor.CancelTask(context.Background(), executionID)
+	ctx := context.Background()
+	task, err := s.repository.GetByExecutionID(ctx, executionID)
+	if err != nil {
+		return err
+	}
+
+	worker := task.Worker
+	executor, ok := s.executors[worker.GetType()]
+	if !ok {
+		return errors.New("unsupported worker type")
+	}
+
+	return executor.CancelTask(ctx, executionID)
 }
 
 func (s *TaskServiceImpl) SubscribeToTaskEvents(executionID string) (<-chan entities.TaskEvent, error) {
-	return s.executor.SubscribeToTaskEvents(executionID)
+	ctx := context.Background()
+	task, err := s.repository.GetByExecutionID(ctx, executionID)
+	if err != nil {
+		return nil, err
+	}
+
+	worker := task.Worker
+	executor, ok := s.executors[worker.GetType()]
+	if !ok {
+		return nil, errors.New("unsupported worker type")
+	}
+
+	return executor.SubscribeToTaskEvents(executionID)
 }

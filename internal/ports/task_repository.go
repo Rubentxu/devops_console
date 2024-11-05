@@ -30,4 +30,5 @@ type TaskRepository interface {
 	Update(ctx context.Context, task *entities.DevOpsTask) error
 	Delete(ctx context.Context, taskID string) error
 	GetAll(ctx context.Context, filters TaskFilters) ([]entities.DevOpsTask, error)
+	GetByExecutionID(ctx context.Context, executionID string) (entities.DevOpsTask, error)
 }
