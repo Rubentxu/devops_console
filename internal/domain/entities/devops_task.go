@@ -1,7 +1,9 @@
 // internal/domain/entities/task.go
 package entities
 
-import "time"
+import (
+	"time"
+)
 
 type TaskStatus string
 
@@ -12,6 +14,7 @@ const (
 	TaskFailed    TaskStatus = "FAILED"
 	TaskCanceled  TaskStatus = "CANCELED"
 	TaskError     TaskStatus = "ERROR"
+	TaskScheduled TaskStatus = "SCHEDULED"
 )
 
 type TaskType string
@@ -36,6 +39,8 @@ type DevOpsTask struct {
 	TaskType    TaskType
 	Approvals   []*Approval
 	Trigger     *Trigger
+	Tags        []string
+	Worker      Worker
 }
 
 type TaskConfig struct {

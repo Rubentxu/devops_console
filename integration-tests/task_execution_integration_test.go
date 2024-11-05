@@ -1,4 +1,4 @@
-package test
+package integration_tests
 
 import (
 	"context"
@@ -6,7 +6,9 @@ import (
 	"devops_console/internal/domain/entities"
 	eventstream "devops_console/internal/infrastructure/events"
 	executor "devops_console/internal/infrastructure/executors"
-	adapters "devops_console/internal/infrastructure/repositories"
+	"devops_console/internal/infrastructure/repositories"
+	workers "devops_console/internal/infrastructure/workers"
+
 	"log"
 	"testing"
 	"time"
@@ -34,13 +36,18 @@ func TestTaskExecution(t *testing.T) {
 	// Crear una tarea de ejemplo
 	task := entities.DevOpsTask{
 		ID:          "task-1",
-		Name:        "test-task",
+		Name:        "integration-tests-task",
 		Description: "A task for testing purposes",
 		Config: entities.TaskConfig{
 			Parameters: map[string]interface{}{
-				"Image":   "busybox",
-				"Command": []string{"sh", "-c", "for i in $(seq 1 5); do echo \"Linea traza $i\"; sleep 1; done"},
+				"arg": "argumento 1",
 			},
+		},
+		Worker: &workers.KubernetesWorker{
+			Name:      "pruebas",
+			Namespace: "default",
+			Image:     "busybox",
+			Command:   []string{"sh", "-c", "for i in $(seq 1 5); do echo \"Linea traza $i\"; sleep 1; done"},
 		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -136,13 +143,18 @@ func TestDockerTaskExecution(t *testing.T) {
 	// Crear una tarea de ejemplo
 	task := entities.DevOpsTask{
 		ID:          "task-1",
-		Name:        "test-task",
+		Name:        "integration-tests-task",
 		Description: "A task for testing purposes",
 		Config: entities.TaskConfig{
 			Parameters: map[string]interface{}{
-				"Image":   "busybox",
-				"Command": []string{"sh", "-c", "for i in $(seq 1 5); do echo \"Linea traza $i\"; sleep 1; done"},
+				"args": "arguemento 1",
 			},
+		},
+
+		Worker: &workers.DockerWorker{
+			Name:    "pruebas",
+			Image:   "busybox",
+			Command: []string{"sh", "-c", "for i in $(seq 1 5); do echo \"Linea traza $i\"; sleep 1; done"},
 		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),

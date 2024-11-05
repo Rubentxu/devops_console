@@ -81,7 +81,7 @@ func (suite *TaskServiceTestSuite) SetupTest() {
 }
 
 func (suite *TaskServiceTestSuite) TestExecuteTask_Success() {
-	taskID := "test-task-id"
+	taskID := "integration-tests-task-id"
 	task := entities.DevOpsTask{ID: taskID}
 	executionID := "execution-id"
 
@@ -102,7 +102,7 @@ func (suite *TaskServiceTestSuite) TestExecuteTask_Success() {
 }
 
 func (suite *TaskServiceTestSuite) TestExecuteTask_Failure() {
-	taskID := "test-task-id"
+	taskID := "integration-tests-task-id"
 	task := entities.DevOpsTask{ID: taskID}
 	_ = "execution-id"
 	execErr := fmt.Errorf("execution error")

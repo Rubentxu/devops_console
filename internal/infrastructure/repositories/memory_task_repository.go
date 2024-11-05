@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// Implementación sencilla de TaskRepository en memoria para el test
+// Implementación sencilla de TaskRepository en memoria para el integration-tests
 type InMemoryTaskRepository struct {
 	tasks map[string]entities.DevOpsTask
 	mu    sync.Mutex

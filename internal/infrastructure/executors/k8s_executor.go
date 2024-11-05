@@ -1,4 +1,4 @@
-package executor
+package adapters
 
 import (
 	"bufio"
@@ -89,7 +89,7 @@ func NewK8sTaskExecutor(namespace string, eventStream ports.TaskEventStream) (*K
 }
 
 func (e *K8sTaskExecutor) ExecuteTask(ctx context.Context, task *entities.DevOpsTask) (string, error) {
-	timeout, ok := task.Config.Parameters["JobTimeout"].(time.Duration)
+	timeout, ok := task.Worker.GetDetails()["JobTimeout"].(time.Duration)
 	if !ok {
 		timeout = 30 * time.Second // Default value
 	}
@@ -130,9 +130,9 @@ func (e *K8sTaskExecutor) runTask(ctx context.Context, task *entities.DevOpsTask
 					Containers: []corev1.Container{
 						{
 							Name:    task.Name,
-							Image:   task.Config.Parameters["Image"].(string),
-							Command: task.Config.Parameters["Command"].([]string),
-							Env:     getEnvVars(task.Config.Parameters),
+							Image:   task.Worker.GetDetails()["Image"].(string),
+							Command: task.Worker.GetDetails()["Command"].([]string),
+							Env:     getEnvVars(task.Worker.GetDetails()),
 						},
 					},
 				},
@@ -363,7 +363,7 @@ func generateEventID() string {
 }
 
 func getEnvVars(parameters map[string]interface{}) []corev1.EnvVar {
-	if env, ok := parameters["Env"].([]corev1.EnvVar); ok {
+	if env, ok := parameters["EnvVars"].([]corev1.EnvVar); ok {
 		return env
 	}
 	return []corev1.EnvVar{} // Return an empty slice if "Env" is not defined

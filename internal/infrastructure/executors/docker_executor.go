@@ -1,4 +1,4 @@
-package executor
+package adapters
 
 import (
 	"bufio"
@@ -35,7 +35,7 @@ func NewDockerTaskExecutor(eventStream ports.TaskEventStream) (*DockerTaskExecut
 }
 
 func (e *DockerTaskExecutor) ExecuteTask(ctx context.Context, task *entities.DevOpsTask) (string, error) {
-	timeout, ok := task.Config.Parameters["JobTimeout"].(time.Duration)
+	timeout, ok := task.Worker.GetDetails()["JobTimeout"].(time.Duration)
 	if !ok {
 		timeout = 30 * time.Second // Default value
 	}
@@ -59,7 +59,7 @@ func (e *DockerTaskExecutor) ExecuteTask(ctx context.Context, task *entities.Dev
 }
 
 func (e *DockerTaskExecutor) runTask(ctx context.Context, task *entities.DevOpsTask, taskExecution *entities.TaskExecution) {
-	image := task.Config.Parameters["Image"].(string)
+	image := task.Worker.GetDetails()["Image"].(string)
 
 	// Pull the image if it does not exist
 	_, _, err := e.client.ImageInspectWithRaw(ctx, image)
@@ -81,8 +81,8 @@ func (e *DockerTaskExecutor) runTask(ctx context.Context, task *entities.DevOpsT
 
 	config := &container.Config{
 		Image: image,
-		Cmd:   task.Config.Parameters["Command"].([]string),
-		Env:   getDockerEnvVars(task.Config.Parameters),
+		Cmd:   task.Worker.GetDetails()["Command"].([]string),
+		Env:   getDockerEnvVars(task.Worker.GetDetails()),
 	}
 
 	resp, err := e.client.ContainerCreate(ctx, config, nil, nil, nil, "")
@@ -201,7 +201,7 @@ func (e *DockerTaskExecutor) publishEvent(executionID string, eventType entities
 }
 
 func getDockerEnvVars(parameters map[string]interface{}) []string {
-	if env, ok := parameters["Env"].([]string); ok {
+	if env, ok := parameters["EnvVars"].([]string); ok {
 		return env
 	}
 	return []string{} // Return an empty slice if "Env" is not defined

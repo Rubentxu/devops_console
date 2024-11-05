@@ -1,4 +1,4 @@
-package eventstream
+package adapters
 
 import (
 	"devops_console/internal/domain/entities"
