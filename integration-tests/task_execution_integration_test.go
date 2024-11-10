@@ -2,12 +2,13 @@ package integration_tests
 
 import (
 	"context"
-	"devops_console/internal/application"
-	"devops_console/internal/domain/entities"
-	eventstream "devops_console/internal/infrastructure/events"
-	executor "devops_console/internal/infrastructure/executors"
-	adapters "devops_console/internal/infrastructure/repositories"
-	workers "devops_console/internal/infrastructure/workers"
+	services "devops_console/internal/application/orchestrator"
+	"devops_console/internal/domain/entities/orchestrator"
+	eventstream "devops_console/internal/infrastructure/orchestrator/events"
+	adapters "devops_console/internal/infrastructure/orchestrator/executors"
+	repositories "devops_console/internal/infrastructure/orchestrator/repositories"
+	workers "devops_console/internal/infrastructure/orchestrator/workers"
+
 	"log"
 	"testing"
 	"time"
@@ -21,21 +22,21 @@ func TestTaskExecutionWithDockerWorker(t *testing.T) {
 	eventStream := eventstream.NewTaskEventStream()
 
 	// Create the TaskExecutor
-	dockerExecutor, err := executor.NewDockerTaskExecutor(eventStream)
+	dockerExecutor, err := adapters.NewDockerTaskExecutor(eventStream)
 	if err != nil {
 		t.Fatalf("Error creating DockerTaskExecutor: %v", err)
 	}
 
-	k8sExecutor, err := executor.NewK8sTaskExecutor("default", eventStream)
+	k8sExecutor, err := adapters.NewK8sTaskExecutor("default", eventStream)
 	if err != nil {
 		t.Fatalf("Error creating K8sTaskExecutor: %v", err)
 	}
 
 	// Create the TaskRepository in memory
-	taskRepo := adapters.NewInMemoryTaskRepository()
+	taskRepo := repositories.NewInMemoryTaskRepository()
 
 	// Create the TaskService
-	taskService := application.NewTaskServiceImpl(taskRepo)
+	taskService := services.NewTaskServiceImpl(taskRepo)
 	taskService.RegisterExecutor("Docker", dockerExecutor)
 	taskService.RegisterExecutor("Kubernetes", k8sExecutor)
 
@@ -134,16 +135,16 @@ func TestTaskExecutionWithKubernetesWorker(t *testing.T) {
 	eventStream := eventstream.NewTaskEventStream()
 
 	// Create the TaskExecutor
-	k8sExecutor, err := executor.NewK8sTaskExecutor("default", eventStream)
+	k8sExecutor, err := adapters.NewK8sTaskExecutor("default", eventStream)
 	if err != nil {
 		t.Fatalf("Error creating K8sTaskExecutor: %v", err)
 	}
 
 	// Create the TaskRepository in memory
-	taskRepo := adapters.NewInMemoryTaskRepository()
+	taskRepo := repositories.NewInMemoryTaskRepository()
 
 	// Create the TaskService
-	taskService := application.NewTaskServiceImpl(taskRepo)
+	taskService := services.NewTaskServiceImpl(taskRepo)
 	taskService.RegisterExecutor("Kubernetes", k8sExecutor)
 
 	// Create a sample task with a Kubernetes worker
@@ -242,21 +243,21 @@ func TestTaskCancellationWithDockerWorker(t *testing.T) {
 	eventStream := eventstream.NewTaskEventStream()
 
 	// Create the TaskExecutors
-	dockerExecutor, err := executor.NewDockerTaskExecutor(eventStream)
+	dockerExecutor, err := adapters.NewDockerTaskExecutor(eventStream)
 	if err != nil {
 		t.Fatalf("Error creating DockerTaskExecutor: %v", err)
 	}
 
-	k8sExecutor, err := executor.NewK8sTaskExecutor("default", eventStream)
+	k8sExecutor, err := adapters.NewK8sTaskExecutor("default", eventStream)
 	if err != nil {
 		t.Fatalf("Error creating K8sTaskExecutor: %v", err)
 	}
 
 	// Create the TaskRepository in memory
-	taskRepo := adapters.NewInMemoryTaskRepository()
+	taskRepo := repositories.NewInMemoryTaskRepository()
 
 	// Create the TaskService
-	taskService := application.NewTaskServiceImpl(taskRepo)
+	taskService := services.NewTaskServiceImpl(taskRepo)
 	taskService.RegisterExecutor("Docker", dockerExecutor)
 	taskService.RegisterExecutor("Kubernetes", k8sExecutor)
 

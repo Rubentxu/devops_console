@@ -1,0 +1,8 @@
+FROM golang:1.21 as builder
+WORKDIR /app
+COPY . .
+RUN make build-agent
+
+FROM alpine:3.18
+COPY --from=builder /app/bin/agent /usr/local/bin/
+CMD ["agent"]

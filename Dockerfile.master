@@ -1,0 +1,9 @@
+# Dockerfile.master
+FROM golang:1.21 as builder
+WORKDIR /app
+COPY . .
+RUN make build-master
+
+FROM alpine:3.18
+COPY --from=builder /app/bin/master /usr/local/bin/
+CMD ["master"]
